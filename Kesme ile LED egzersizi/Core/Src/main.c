@@ -47,7 +47,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if (GPIO_Pin == GPIO_PIN_0){
 		i++;
 		sure = sure - 400;
-
+		if (i == 4){
+			i = 0;
+			sure = 1900;
+		}
 
 		}
 
@@ -92,33 +95,28 @@ int main(void)
   while (1)
   {
 	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
+	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15, RESET);
 
 	  if (i == 1){
 	 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);
 	 			  HAL_Delay(sure);
 	 		  }
 	  else if (i == 2){
-		  //while(1) içinde iken
+
 	 			  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14 | GPIO_PIN_15);
 	 			  HAL_Delay(sure);
+
 
 	 		  }
 	  else if (i == 3){
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);
-//		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);//p13 söndü, p14toggle, p15 set
-//		  HAL_Delay(sure);
-		  while(1){
-			  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);//p13 söndü, p14toggle, p15 set
-			  HAL_Delay(sure);//if i == 3 bloğundan sonra p15 1 kalıyo ve diğerleri 0. döngü baştan başlamıyo
-			  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);
-			  HAL_Delay(1000);
-		  }
-	 		  }
- 	  else {
-	 			i = 0;//bu değerler sıfırlanmıyo
-	 			sure = 1900;
-	 			}
 
+		  HAL_GPIO_WritePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14,RESET);
+		  HAL_Delay(sure);
+		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);
+		  HAL_Delay(2000);
+
+	 		  }
 
   }
   /* USER CODE END 3 */

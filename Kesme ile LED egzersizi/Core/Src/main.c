@@ -4,8 +4,7 @@
   * @file           : main.c
   * @brief          : Main program body
   ******************************************************************************
-5.08_15.31:ilk olarak mavi led yanıyo, ardından sönüyo ve kısa bi süre kırmızı led yanıyo, sonra mavi led sürekli yanıyo.
-  *
+
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -203,12 +202,6 @@ static void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

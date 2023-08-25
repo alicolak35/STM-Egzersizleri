@@ -4,7 +4,9 @@
   * @file           : main.c
   * @brief          : Main program body
   ******************************************************************************
-
+24.08_15.31:i==2 bloğndaki togle RESET konumundaki pini SET yapmıyo.
+-toggle önüne ve ardına delay fonksiyonu koyunca while(1) döngüsü içinde gibi davranıyo
+  *
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -29,7 +31,7 @@ static void MX_GPIO_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 //GPIO_EXTI_Callback fonksiyonunda,her artan kesmede ledi yakıp söndürme tanımlandı
-/*
+
 void GPIO_EXTI_Config(){
 	HAL_EXTI_SetConfigLine(&EXTI_Handle, &EXTI_InitStr);
 
@@ -41,56 +43,63 @@ void GPIO_EXTI_Config(){
 	HAL_EXTI_GetConfigLine(&EXTI_Handle, &EXTI_InitStr);
 
 }
-*/
+//BERAKPOİNT + MOVE TO LİNE
+
+void delay(int16_t time){
+	time -= time;
+}
+/*
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if (GPIO_Pin == GPIO_PIN_0){
+		//uint32_t idr;
+		//idr = GPIOA->IDR;
+		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) != 0){
+			delay(200);
+		}
 		i++;
 		sure = sure - 400;
-		if (i == 4){
+		if (i == 4){//ark olmasına rağmen baştan başladı
 			i = 0;
 			sure = 1900;
 		}
-
+//exti config ne işe yarıyo?:A portunun P0 pininin kesme işlevi olduğunu söylüyo
 		}
 
 }
 
-/* USER CODE END 0 */
+*/
+uint32_t lastDebounceTime = 0;
+const uint32_t debounceDelay = 50; // Debounce delay in milliseconds
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == GPIO_PIN_0) {
+        uint32_t currentTime = HAL_GetTick(); // Get current time in milliseconds
+
+        if ((currentTime - lastDebounceTime) >= debounceDelay) {
+            // Debounce time has passed, handle button press
+            i++;
+            sure = sure - 400;
+            if (i == 4) {
+                i = 0;
+                sure = 1900;
+            }
+
+            lastDebounceTime = currentTime; // Update last debounce time
+        }
+    }
+}
+
+
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
+  GPIO_EXTI_Config();
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
 	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
@@ -98,21 +107,25 @@ int main(void)
 
 	  if (i == 1){
 	 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);
-	 			  HAL_Delay(sure);
 	 		  }
 	  else if (i == 2){
-
-	 			  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14 | GPIO_PIN_15);
-	 			  HAL_Delay(sure);
-
-
-	 		  }
-	  else if (i == 3){
+		  HAL_Delay(2000);
+		  //GPIOD->BSRR = 0x80002000;
+		  	  	  //HAL_Delay(sure+700);//Toggle öncesi Delay fonksiyonu yanıp sönmesini sağlıyo, sürekli döngü içinde
+	 	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14 | GPIO_PIN_15);// RESET olan p15 toggle ile SET olmuyo.
+	 			  //HAL_Delay(sure);
+		  	 }
+	  else if (i == 3){//i=3 iken if bloğu tamamlanıyo ve çıktıktan sonra while(1) döngüsü içinde olduğu için ve i=3 olduğu için yeniden bu ifade içine girip pin değerlerini değiştiriyo.
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);
+//		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);//p13 söndü, p14toggle, p15 set
+//		  HAL_Delay(sure);
 
-		  HAL_GPIO_WritePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14,RESET);
-		  HAL_Delay(sure);
-		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);
+		  //HAL_GPIO_WritePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14,RESET);//p13 söndü, p14toggle, p15 set
+		  HAL_Delay(1000);//bu olmadığında yalnızca p14 yanıyo.olduğunda p13 ve p14 değişmeli yanıyo
+		  //HAL_GPIO_WritePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14,SET);
+		  //HAL_Delay(sure);//
+
+		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);//14 SET,
 		  HAL_Delay(2000);
 
 	 		  }
@@ -121,10 +134,7 @@ int main(void)
   /* USER CODE END 3 */
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -187,7 +197,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15 | GPIO_PIN_14 |GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PA0 PA1 PA2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2;
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -202,6 +212,7 @@ static void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

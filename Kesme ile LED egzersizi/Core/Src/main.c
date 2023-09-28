@@ -1,37 +1,40 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-24.08_15.31:i==2 bloğndaki togle RESET konumundaki pini SET yapmıyo.
--toggle önüne ve ardına delay fonksiyonu koyunca while(1) döngüsü içinde gibi davranıyo
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 #include "stm32f4xx_hal_exti.h"
 
 GPIO_InitTypeDef Init;
 EXTI_ConfigTypeDef EXTI_InitStr;
 EXTI_HandleTypeDef EXTI_Handle;
+
 int i = 0, sure = 1900;
-//birinci adımda LEDler tek kesme ile yanıp sönüyo
-//
 
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-/* USER CODE BEGIN PFP */
 
-/* USER CODE END PFP */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-//GPIO_EXTI_Callback fonksiyonunda,her artan kesmede ledi yakıp söndürme tanımlandı
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15 | GPIO_PIN_14 |GPIO_PIN_13, GPIO_PIN_RESET);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_15 | GPIO_PIN_14 | GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+}
+// Pin 0 of port A is configured to interrupt line
 void GPIO_EXTI_Config(){
 	HAL_EXTI_SetConfigLine(&EXTI_Handle, &EXTI_InitStr);
 
@@ -41,53 +44,24 @@ void GPIO_EXTI_Config(){
 	EXTI_InitStr.GPIOSel = EXTI_GPIOA;
 
 	HAL_EXTI_GetConfigLine(&EXTI_Handle, &EXTI_InitStr);
-
 }
-//BERAKPOİNT + MOVE TO LİNE
-
-void delay(int16_t time){
-	time -= time;
-}
-/*
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	if (GPIO_Pin == GPIO_PIN_0){
-		//uint32_t idr;
-		//idr = GPIOA->IDR;
-		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) != 0){
-			delay(200);
-		}
-		i++;
-		sure = sure - 400;
-		if (i == 4){//ark olmasına rağmen baştan başladı
-			i = 0;
-			sure = 1900;
-		}
-//exti config ne işe yarıyo?:A portunun P0 pininin kesme işlevi olduğunu söylüyo
-		}
-
-}
-
-*/
+//Debouncing alghorithm
 uint32_t lastDebounceTime = 0;
-const uint32_t debounceDelay = 50; // Debounce delay in milliseconds
+const uint32_t debounceDelay = 200; 
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if (GPIO_Pin == GPIO_PIN_0) {
-        uint32_t currentTime = HAL_GetTick(); // Get current time in milliseconds
+     uint32_t currentTime = HAL_GetTick();
 
-        if ((currentTime - lastDebounceTime) >= debounceDelay) {
-            // Debounce time has passed, handle button press
-            i++;
-            sure = sure - 400;
-            if (i == 4) {
-                i = 0;
-                sure = 1900;
+     if ((currentTime - lastDebounceTime) >= debounceDelay) {
+         i++;
+         sure = sure - 400;
+         if (i == 4) {
+             i = 0;
+             sure = 1900;
             }
-
-            lastDebounceTime = currentTime; // Update last debounce time
+        lastDebounceTime = currentTime;
         }
     }
-}
 
 
 int main(void)
@@ -97,41 +71,38 @@ int main(void)
   SystemClock_Config();
 
   GPIO_EXTI_Config();
-  /* Initialize all configured peripherals */
+
   MX_GPIO_Init();
+
+  HAL_GPIO_EXTI_Callback(GPIO_PIN_0);
+
 
   while (1)
   {
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15, RESET);
+	  // Predetermined state
+	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);//Orange LED
+	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15, RESET);// Pin 14 is red, pin 15 is blue LED
 
 	  if (i == 1){
-	 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);
+	 	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);
 	 		  }
 	  else if (i == 2){
-		  HAL_Delay(2000);
-		  //GPIOD->BSRR = 0x80002000;
-		  	  	  //HAL_Delay(sure+700);//Toggle öncesi Delay fonksiyonu yanıp sönmesini sağlıyo, sürekli döngü içinde
-	 	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14 | GPIO_PIN_15);// RESET olan p15 toggle ile SET olmuyo.
-	 			  //HAL_Delay(sure);
+
+		  HAL_Delay(sure);
+
+	 	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13 | GPIO_PIN_15);
 		  	 }
-	  else if (i == 3){//i=3 iken if bloğu tamamlanıyo ve çıktıktan sonra while(1) döngüsü içinde olduğu için ve i=3 olduğu için yeniden bu ifade içine girip pin değerlerini değiştiriyo.
-		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);
-//		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);//p13 söndü, p14toggle, p15 set
-//		  HAL_Delay(sure);
+	  else if (i == 3){
+		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, SET);//Blue LED is set
 
-		  //HAL_GPIO_WritePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14,RESET);//p13 söndü, p14toggle, p15 set
-		  HAL_Delay(1000);//bu olmadığında yalnızca p14 yanıyo.olduğunda p13 ve p14 değişmeli yanıyo
-		  //HAL_GPIO_WritePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14,SET);
-		  //HAL_Delay(sure);//
+		  HAL_Delay(sure);
 
-		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);//14 SET,
-		  HAL_Delay(2000);
+		  HAL_GPIO_TogglePin(GPIOD,  GPIO_PIN_13| GPIO_PIN_14);
 
-	 		  }
-
+		  HAL_Delay(sure);
+	  }
   }
-  /* USER CODE END 3 */
+
 }
 
 
@@ -140,14 +111,9 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -157,13 +123,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLN = 50;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
   RCC_OscInitStruct.PLL.PLLQ = 7;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -171,85 +131,3 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15 | GPIO_PIN_14 |GPIO_PIN_13, GPIO_PIN_RESET);
-
-  /*Configure GPIO pins : PA0 PA1 PA2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PD15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_15 | GPIO_PIN_14 | GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
-
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
-}
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
-}
-
-#ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
-void assert_failed(uint8_t *file, uint32_t line)
-{
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
-}
-#endif /* USE_FULL_ASSERT */

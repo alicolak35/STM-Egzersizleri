@@ -1,0 +1,7 @@
+Peoject Materials;
+1- STM32F429Z Discovery board
+2- Anode display
+
+In this mini-project, program is designed to show output on seven segment display by selected pins. Pins are HIGH in default and adjusted to LOW 
+when present the desired output due to anode characteristic of seven segment display. Funcrional MACROs are built for one group due to
+compatibility between STM32 boards. 
